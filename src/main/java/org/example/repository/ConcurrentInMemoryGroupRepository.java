@@ -5,6 +5,7 @@ import org.example.domain.Group;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Repository
@@ -21,25 +22,7 @@ public class ConcurrentInMemoryGroupRepository implements GroupRepository {
     }
 
     @Override
-    public Group findById(String groupId) {
-        return groupMap.getOrDefault(groupId, null);
-    }
-
-    @Override
-    public void addExpense(String groupId, String memberId, BigDecimal amount, String transactionId) {
-        if (!groupMap.containsKey(groupId)) {
-            throw new IllegalArgumentException("Group with id " + groupId + " does not exist.");
-        }
-        Group group = groupMap.get(groupId);
-        group.addExpense(memberId, amount, transactionId);
-    }
-
-    @Override
-    public void settleUp(String groupId, String memberId1, String memberId2, BigDecimal amount, String transactionId) {
-        if (!groupMap.containsKey(groupId)) {
-            throw new IllegalArgumentException("Group with id " + groupId + " does not exist.");
-        }
-        Group group = groupMap.get(groupId);
-        group.settleUp(memberId1, memberId2, amount, transactionId);
+    public Optional<Group> findById(String groupId) {
+        return groupMap.get(groupId) != null ? Optional.of(groupMap.get(groupId)) : Optional.empty();
     }
 }

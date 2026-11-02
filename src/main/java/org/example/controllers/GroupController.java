@@ -6,15 +6,7 @@ import org.example.domain.Member;
 import org.example.repository.GroupRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -65,9 +57,8 @@ public class GroupController {
     public void addExpense(@PathVariable String id,
                            @RequestHeader("Idempotency-Key") String idempotencyKey,
                            @RequestBody ExpenseRequest request) {
-        requireGroup(id);
         requireAmount(request.amount());
-        groupRepository.addExpense(id, request.memberId(), request.amount(), idempotencyKey);
+        requireGroup(id).addExpense(request.memberId(), request.amount(), idempotencyKey);
     }
 
     @GetMapping("/{id}/balances")
@@ -80,10 +71,8 @@ public class GroupController {
     public void settleUp(@PathVariable String id,
                          @RequestHeader("Idempotency-Key") String idempotencyKey,
                          @RequestBody SettlementRequest request) {
-        requireGroup(id);
         requireAmount(request.amount());
-        // Group.settleUp takes the receiver first, then the payer.
-        groupRepository.settleUp(id, request.receiverId(), request.payerId(), request.amount(), idempotencyKey);
+        requireGroup(id).settleUp(request.payerId(), request.receiverId(), request.amount(), idempotencyKey);
     }
 
     @ExceptionHandler(ConflictException.class)
@@ -98,10 +87,10 @@ public class GroupController {
 
     private Group requireGroup(String id) {
         var group = groupRepository.findById(id);
-        if (group == null) {
+        if (group.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Group with id " + id + " does not exist.");
         }
-        return group;
+        return group.get();
     }
 
     private static void requireAmount(BigDecimal amount) {

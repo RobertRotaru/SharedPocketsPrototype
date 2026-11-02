@@ -100,7 +100,6 @@ Errors come back as `{"error": "..."}`:
 - Equal splits only, one currency, no users or authentication.
 - Idempotency keys are scoped to a group and kept forever.
 - A settlement can exceed what is owed. It's allowed, and the balances show the overpayment.
-- Settlement requests use `payerId` and `receiverId`. `Group.settleUp` takes the receiver first, so the controller swaps them.
 
 ## What I'd do next
 

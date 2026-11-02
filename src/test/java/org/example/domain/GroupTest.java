@@ -27,7 +27,7 @@ public class GroupTest {
     public void shouldReturnDuplicateMemberMessage() {
         Member member = new Member("1", "John Doe", "");
         group.addMember(member);
-        assertThrows(IllegalArgumentException.class, () -> group.addMember(member), "Member with uid 1 already exists in the group.");
+        assertThrows(IllegalArgumentException.class, () -> group.addMember(member));
     }
 
     @Test
@@ -103,7 +103,7 @@ public class GroupTest {
     public void shouldThrowExceptionWhenSettlingUpWithNonExistingMember() {
         Member member1 = new Member("1", "John Doe", "");
         group.addMember(member1);
-        assertThrows(IllegalArgumentException.class, () -> group.settleUp(member1.uid(), "2", BigDecimal.valueOf(100.00)));
+        assertThrows(IllegalArgumentException.class, () -> group.settleUp("2", member1.uid(), BigDecimal.valueOf(100.00)));
     }
 
     @Test
@@ -113,7 +113,7 @@ public class GroupTest {
         group.addMember(member1);
         group.addMember(member2);
         group.addExpense("1", BigDecimal.valueOf(100.00));
-        group.settleUp(member1.uid(), member2.uid(), BigDecimal.valueOf(50.00));
+        group.settleUp(member2.uid(), member1.uid(), BigDecimal.valueOf(50.00));
         assertEquals(0, group.getExpenseForMember("1").compareTo(BigDecimal.valueOf(0.00)));
         assertEquals(0, group.getExpenseForMember("2").compareTo(BigDecimal.valueOf(0.00)));
         assertEquals(0, calculateTotal(group).compareTo(BigDecimal.ZERO));
@@ -144,7 +144,7 @@ public class GroupTest {
         group.addMember(member1);
         group.addMember(member2);
         group.addExpense("1", BigDecimal.valueOf(100.00), "txn123");
-        assertThrows(IllegalArgumentException.class, () -> group.settleUp("1", "2", BigDecimal.TEN, "txn123"));
+        assertThrows(IllegalArgumentException.class, () -> group.settleUp("2", "1", BigDecimal.TEN, "txn123"));
     }
 
     @RepeatedTest(20)
@@ -212,7 +212,7 @@ public class GroupTest {
             futures.add(pool.submit(() -> {
                 finalStart.await();
                 for (int j = 0; j < noTasks / noThreads; ++j) {
-                    group.settleUp("1", "2", valueSettle, "txn456");
+                    group.settleUp("2", "1", valueSettle, "txn456");
                 }
                 return null;
             }));

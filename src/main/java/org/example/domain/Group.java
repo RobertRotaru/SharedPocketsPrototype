@@ -2,23 +2,23 @@ package org.example.domain;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class Group {
     public String getGid() {
         return gid;
     }
 
-    private String gid;
-    private String name;
-    private String description;
+    private final String gid;
+    private final String name;
+    private final String description;
 
     private final LinkedHashMap<String, Member> members;
     private final LinkedHashMap<String, BigDecimal> balances;
-    private final ConcurrentHashMap<String, String> transactions = new ConcurrentHashMap<>();
+    private final HashMap<String, String> transactions = new HashMap<>();
 
     public Group(String gid, String name, String description) {
         this.gid = gid;
@@ -109,8 +109,8 @@ public class Group {
         }
         validateAmount(amount);
 
-        this.balances.merge(uid1, amount.negate(), BigDecimal::add);
-        this.balances.merge(uid2, amount, BigDecimal::add);
+        this.balances.merge(uid2, amount.negate(), BigDecimal::add);
+        this.balances.merge(uid1, amount, BigDecimal::add);
     }
 
     public synchronized void settleUp(String uid1, String uid2, BigDecimal amount, String transactionId) {
