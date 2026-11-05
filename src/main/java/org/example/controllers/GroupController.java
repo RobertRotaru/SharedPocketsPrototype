@@ -1,5 +1,10 @@
 package org.example.controllers;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.example.controllers.dtos.*;
 import org.example.domain.ConflictException;
 import org.example.domain.Group;
 import org.example.domain.Member;
@@ -15,16 +20,8 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/groups")
+@Tag(name = "Group Management", description = "APIs for managing groups, members, expenses, and settlements")
 public class GroupController {
-    public record CreateGroupRequest(String name, String description) {}
-
-    public record GroupResponse(String id, String name, String description) {}
-
-    public record AddMemberRequest(String uid, String name, String email) {}
-
-    public record ExpenseRequest(String memberId, BigDecimal amount) {}
-
-    public record SettlementRequest(String payerId, String receiverId, BigDecimal amount) {}
 
     private final GroupRepository groupRepository;
 
@@ -32,6 +29,11 @@ public class GroupController {
         this.groupRepository = groupRepository;
     }
 
+    @Operation(summary = "Create a new group", description = "Creates a new group with the provided name and description.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Group created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request data")
+    })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public GroupResponse createGroup(@RequestBody CreateGroupRequest request) {
@@ -43,6 +45,11 @@ public class GroupController {
         return new GroupResponse(group.getGid(), request.name(), request.description());
     }
 
+    @Operation(summary = "Get group information", description = "Retrieves information about a specific group by its ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Group information retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Group not found")
+    })
     @PostMapping("/{id}/members")
     @ResponseStatus(HttpStatus.CREATED)
     public void addMember(@PathVariable String id, @RequestBody AddMemberRequest request) {
@@ -52,6 +59,13 @@ public class GroupController {
         requireGroup(id).addMember(new Member(request.uid(), request.name(), request.email()));
     }
 
+    @Operation(summary = "Add an expense to a group", description = "Adds an expense for a specific member in the group. Requires an Idempotency-Key header to ensure idempotent requests.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Expense added successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request data"),
+            @ApiResponse(responseCode = "404", description = "Group not found"),
+            @ApiResponse(responseCode = "409", description = "Conflict due to duplicate expense submission")
+    })
     @PostMapping("/{id}/expenses")
     @ResponseStatus(HttpStatus.CREATED)
     public void addExpense(@PathVariable String id,
@@ -61,11 +75,23 @@ public class GroupController {
         requireGroup(id).addExpense(request.memberId(), request.amount(), idempotencyKey);
     }
 
+    @Operation(summary = "Get group balances", description = "Retrieves the current balances of all members in the specified group.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Balances retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Group not found")
+    })
     @GetMapping("/{id}/balances")
     public Map<String, BigDecimal> getBalances(@PathVariable String id) {
         return requireGroup(id).getBalances();
     }
 
+    @Operation(summary = "Settle up between members", description = "Settles up the balance between two members in the group. Requires an Idempotency-Key header to ensure idempotent requests.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Settlement completed successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request data"),
+            @ApiResponse(responseCode = "404", description = "Group not found"),
+            @ApiResponse(responseCode = "409", description = "Conflict due to duplicate settlement submission")
+    })
     @PostMapping("/{id}/settlements")
     @ResponseStatus(HttpStatus.CREATED)
     public void settleUp(@PathVariable String id,
