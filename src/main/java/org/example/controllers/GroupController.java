@@ -8,10 +8,12 @@ import org.example.controllers.dtos.*;
 import org.example.domain.ConflictException;
 import org.example.domain.Group;
 import org.example.domain.Member;
+import org.example.domain.TransactionHistory;
 import org.example.repository.GroupRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -59,7 +61,7 @@ public class GroupController {
         requireGroup(id).addMember(new Member(request.uid(), request.name(), request.email()));
     }
 
-    @Operation(summary = "Add an expense to a group", description = "Adds an expense for a specific member in the group. Requires an Idempotency-Key header to ensure idempotent requests.")
+    @Operation(summary = "Add an expense to a group", description = "Adds an expense for a specific member in the group. Requires an Idempotency-Key header to ensure idempotent requests. An optional description (1 to 200 characters) is shown in the payment history.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Expense added successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request data"),
@@ -72,7 +74,7 @@ public class GroupController {
                            @RequestHeader("Idempotency-Key") String idempotencyKey,
                            @RequestBody ExpenseRequest request) {
         requireAmount(request.amount());
-        requireGroup(id).addExpense(request.memberId(), request.amount(), idempotencyKey);
+        requireGroup(id).addExpense(request.memberId(), request.amount(), idempotencyKey, request.description());
     }
 
     @Operation(summary = "Get group balances", description = "Retrieves the current balances of all members in the specified group.")
@@ -85,7 +87,7 @@ public class GroupController {
         return requireGroup(id).getBalances();
     }
 
-    @Operation(summary = "Settle up between members", description = "Settles up the balance between two members in the group. Requires an Idempotency-Key header to ensure idempotent requests.")
+    @Operation(summary = "Settle up between members", description = "Settles up the balance between two members in the group. Requires an Idempotency-Key header to ensure idempotent requests. An optional description (1 to 200 characters) is shown in the payment history.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Settlement completed successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request data"),
@@ -98,7 +100,28 @@ public class GroupController {
                          @RequestHeader("Idempotency-Key") String idempotencyKey,
                          @RequestBody SettlementRequest request) {
         requireAmount(request.amount());
-        requireGroup(id).settleUp(request.payerId(), request.receiverId(), request.amount(), idempotencyKey);
+        requireGroup(id).settleUp(request.payerId(), request.receiverId(), request.amount(), idempotencyKey, request.description());
+    }
+
+    @Operation(summary = "Get a group's payment history", description = "Returns one page of the group's payments (expenses and settlements), newest first, 10 per page. Only public data is returned: description, payer and when it was recorded.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "History page retrieved successfully (empty items for a group with no payments or a page past the end)"),
+            @ApiResponse(responseCode = "400", description = "Page is zero, negative or not a whole number"),
+            @ApiResponse(responseCode = "404", description = "Group not found")
+    })
+    @GetMapping("/{id}/transactions")
+    public TransactionPageResponse getTransactions(@PathVariable String id,
+                                                   @RequestParam(defaultValue = "1") int page) {
+        var result = requireGroup(id).getTransactionPage(page);
+        var items = result.items().stream()
+                .map(t -> new TransactionResponse(t.description(), t.payerId(), t.recordedAt()))
+                .toList();
+        return new TransactionPageResponse(result.page(), TransactionHistory.PAGE_SIZE, result.hasNext(), items);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, String>> invalidArgumentType(MethodArgumentTypeMismatchException e) {
+        return ResponseEntity.badRequest().body(Map.of("error", "Page must be a positive whole number."));
     }
 
     @ExceptionHandler(ConflictException.class)

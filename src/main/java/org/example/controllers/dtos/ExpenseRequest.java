@@ -5,5 +5,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 
 @Schema(name = "ExpenseRequest", description = "Request body for adding an expense to a member")
-public record ExpenseRequest(String memberId, BigDecimal amount) {}
+public record ExpenseRequest(
+        String memberId,
+        BigDecimal amount,
+        @Schema(description = "Optional text shown in the payment history (1 to 200 characters after trimming). "
+                + "Defaults to \"Expense\" when omitted.", example = "Dinner") String description) {
 
+    /** Pre-description format, kept so existing callers keep compiling. */
+    public ExpenseRequest(String memberId, BigDecimal amount) {
+        this(memberId, amount, null);
+    }
+}

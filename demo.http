@@ -57,3 +57,19 @@ Idempotency-Key: settle-1
 
 ### 8. Unknown group: 404
 GET http://localhost:8080/groups/does-not-exist/balances
+
+### 9. An expense with a description (optional field, 1 to 200 characters)
+POST http://localhost:8080/groups/{{gid}}/expenses
+Content-Type: application/json
+Idempotency-Key: taxi-1
+
+{"memberId": "cris", "amount": 24.50, "description": "Taxi to the airport"}
+
+### 10. Payment history, newest first, 10 per page. No ids or idempotency keys in the response
+GET http://localhost:8080/groups/{{gid}}/transactions
+
+### 11. Second page (empty here until the group has more than 10 payments)
+GET http://localhost:8080/groups/{{gid}}/transactions?page=2
+
+### 12. Invalid page: 400
+GET http://localhost:8080/groups/{{gid}}/transactions?page=0
